@@ -8,3 +8,7 @@ body{background:#000}h1 em{color:#91c9c4}.brand-icon{background:#153f3c;color:wh
 
 /* Contraste dos controlos sobre o fundo preto */
 button{color:var(--ink)}.share-buttons button,.share-buttons a{color:#f5f5f5}.share-buttons button:hover,.share-buttons a:hover{color:#fff}.brand-icon{color:#fff}.brand-icon svg{display:block}
+
+/* Aproveitar a largura do ecrã com cinco episódios por fila */
+header,main{max-width:none;width:100%;margin-left:0;margin-right:0}header{padding-left:28px;padding-right:28px}main{padding-left:28px;padding-right:28px}
+@media(max-width:700px){header{padding-left:20px;padding-right:20px}main{padding-left:20px;padding-right:20px}}
