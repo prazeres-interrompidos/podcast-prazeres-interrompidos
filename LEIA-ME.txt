@@ -39,3 +39,29 @@ O RSS é obtido no processo de publicação, evitando bloqueios de acesso entre
 origens no navegador. O áudio e as capas são servidos pelos endereços do RSS.
 Os ficheiros MP3 e as capas não são copiados para o repositório.
 Os títulos, as descrições e as capas mantêm os conteúdos fornecidos no RSS.
+
+ALTERAÇÕES DESTA VERSÃO
+Fundo preto e texto adaptado. Logótipo do RSS na página principal.
+Capa dos episódios no seu lugar na página, sem acompanhar a deslocação.
+Pesquisa por palavras nos títulos e descrições de todos os episódios,
+ignorando maiúsculas e acentos. Resultados apresentados 20 de cada vez.
+
+GERIR AS VOZES DO PODCAST
+1. Abra gerir-vozes.html no computador ou no site publicado.
+2. Se abrir no computador, importe o vozes.json que está na pasta principal.
+3. Adicione o nome e a fotografia de cada pessoa. Os botões permitem retirar
+   fotografias e alterar a sua ordem. A imagem é recortada ao centro em círculo.
+4. Clique «Guardar vozes.json».
+5. Substitua vozes.json na pasta principal do repositório pelo descarregado.
+6. Faça Commit e Push no GitHub Desktop. As vozes passam a aparecer no site.
+
+O editor não modifica o site diretamente; só exporta o ficheiro de configuração.
+Não precisa de palavras-passe, chaves ou permissões sobre o repositório.
+Ao clicar numa voz na página principal, a pesquisa mostra os episódios em que
+esse nome surge no título ou na descrição do RSS.
+A lista começa vazia: adicione as fotografias reais das vozes que pretende.
+
+ATUALIZAR A VERSÃO EXISTENTE
+Copie o conteúdo desta pasta para a pasta atual do repositório e aceite
+substituir os ficheiros. Faça Commit e Push no GitHub Desktop.
+Se já tiver fotografias configuradas, conserve o seu vozes.json.

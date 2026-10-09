@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Gera páginas estáticas a partir do RSS, sem dependências externas."""
-import argparse, hashlib, html, json, os, re, unicodedata, urllib.request
+import argparse, hashlib, html, json, os, re, shutil, unicodedata, urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from email.utils import parsedate_to_datetime
@@ -75,8 +75,12 @@ def main():
  out=ROOT/'public'; assets=out/'assets'; assets.mkdir(parents=True,exist_ok=True)
  for name in ('style.css','app.js'): (assets/name).write_text((ROOT/name).read_text(),encoding='utf-8')
  (assets/'episodes.js').write_text('window.EPISODES='+json.dumps(items,ensure_ascii=False).replace('<','\\u003c')+';',encoding='utf-8')
+ # Fotografias geridas no ficheiro vozes.json; imagens podem ser locais ou incorporadas.
+ (assets/'vozes.json').write_text((ROOT/'vozes.json').read_text(encoding='utf-8'),encoding='utf-8')
+ if (ROOT/'imagens').exists(): shutil.copytree(ROOT/'imagens',out/'imagens',dirs_exist_ok=True)
+ shutil.copyfile(ROOT/'gerir-vozes.html',out/'gerir-vozes.html')
  base=args.base_url.rstrip('/')
- home=f'''<section class="intro"><p class="eyebrow">O PODCAST · PRAZERES INTERROMPIDOS</p><h1>Os livros têm voz.<br><em>Descubra a sua próxima escuta.</em></h1><p>Histórias, leituras e encontros com os livros e os escritores.</p><p class="count">{len(items)} episódios para descobrir</p></section><section aria-label="Episódios"><div class="section-heading"><h2>Todos os episódios</h2><span>Do mais recente ao mais antigo</span></div><div class="grid" id="episodes">{''.join(card(e) for e in items[:20])}</div><div class="load"><p id="progress" role="status">20 de {len(items)} episódios</p><button id="more" type="button" hidden>Ver mais <span aria-hidden="true">↓</span></button><noscript><p>Ative o JavaScript para ver os restantes episódios.</p></noscript></div></section><script src="assets/episodes.js"></script>'''
+ home=f'''<section class="intro"><img class="podcast-logo" src="{esc(fallback)}" alt="Logótipo do Podcast Prazeres Interrompidos" width="150" height="150"><p class="eyebrow">O PODCAST · PRAZERES INTERROMPIDOS</p><h1>Os livros têm voz.<br><em>Descubra a sua próxima escuta.</em></h1><p>Histórias, leituras e encontros com os livros e os escritores.</p><p class="count">{len(items)} episódios para descobrir</p></section><section class="voices" id="voices-section" aria-label="Vozes do Podcast"><h2>Vozes do Podcast</h2><div id="voices" class="voices-list"></div><p id="voices-empty">As vozes que dão vida aos livros.</p></section><section aria-label="Episódios"><div class="section-heading"><h2>Todos os episódios</h2><span>Do mais recente ao mais antigo</span></div><form class="search" role="search" id="search-form"><label for="search">Procurar episódios</label><div class="search-field"><span aria-hidden="true">⌕</span><input type="search" id="search" placeholder="Título, livro, autor ou voz do podcast…" autocomplete="off"><button type="reset" id="clear-search" aria-label="Limpar pesquisa">×</button></div></form><p id="search-result" role="status" aria-live="polite"></p><div class="grid" id="episodes">{''.join(card(e) for e in items[:20])}</div><div class="load"><p id="progress" role="status">20 de {len(items)} episódios</p><button id="more" type="button" hidden>Ver mais <span aria-hidden="true">↓</span></button><noscript><p>Ative o JavaScript para ver os restantes episódios.</p></noscript></div></section><script src="assets/episodes.js"></script>'''
  (out/'index.html').write_text(page('Episódios',home,canonical=base+'/' if base else '',image=fallback,description='Ouça os episódios do Podcast Prazeres Interrompidos. Livros, leituras e escritores num só espaço.'),encoding='utf-8')
  for e in items:
   dest=out/'episodios'/e['id']; dest.mkdir(parents=True,exist_ok=True)

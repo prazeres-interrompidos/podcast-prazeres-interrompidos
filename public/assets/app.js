@@ -2,21 +2,37 @@
 const notify=(message)=>{const el=document.getElementById('notice');el.textContent=message;clearTimeout(notify.timer);notify.timer=setTimeout(()=>el.textContent='',4500)};
 const grid=document.getElementById('episodes');
 if(grid&&Array.isArray(window.EPISODES)){
- let shown=grid.children.length;const more=document.getElementById('more'),progress=document.getElementById('progress');
- const update=()=>{progress.textContent=shown+' de '+window.EPISODES.length+' episódios';more.hidden=shown>=window.EPISODES.length};update();
- more.addEventListener('click',()=>{
-  const first=shown,frag=document.createDocumentFragment();
-  for(const e of window.EPISODES.slice(shown,shown+20)){
+ const all=window.EPISODES,more=document.getElementById('more'),progress=document.getElementById('progress'),search=document.getElementById('search'),result=document.getElementById('search-result');
+ let filtered=all,shown=0;
+ const normalize=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-PT');
+ const text=e=>{const doc=new DOMParser().parseFromString(e.description||'','text/html');return normalize(e.title+' '+doc.body.textContent+' '+e.date)};
+ const index=all.map(text);
+ const add=()=>{
+  const frag=document.createDocumentFragment();
+  for(const e of filtered.slice(shown,shown+20)){
    const link=document.createElement('a');link.className='card';link.href='episodios/'+e.id+'/';
    const cover=document.createElement('div');cover.className='cover';const image=document.createElement('img');image.src=e.image;image.alt='Capa de '+e.title;image.loading='lazy';image.width=600;image.height=600;
    const listen=document.createElement('span');listen.className='listen';listen.textContent='▶ Ouvir episódio';cover.append(image,listen);
    const title=document.createElement('h2');title.textContent=e.title;const meta=document.createElement('p');meta.className='meta';const date=document.createElement('time');date.dateTime=e.dateISO;date.textContent=e.date;const duration=document.createElement('span');duration.textContent='◷ '+e.duration;meta.append(date,duration);link.append(cover,title,meta);frag.append(link);
   }
-  grid.append(frag);shown=grid.children.length;update();if(grid.children[first])grid.children[first].focus({preventScroll:true});
- });
- // Ao voltar de um episódio, recupera os episódios que já tinham sido abertos.
- try{const count=Number(sessionStorage.getItem('pi-visible'));while(shown<count&&shown<window.EPISODES.length)more.click();}catch(_){}
- grid.addEventListener('click',()=>{try{sessionStorage.setItem('pi-visible',String(shown))}catch(_){}});
+  grid.append(frag);shown=grid.children.length;progress.textContent=filtered.length?shown+' de '+filtered.length+' episódios':'';more.hidden=shown>=filtered.length;
+ };
+ const filter=()=>{const terms=normalize(search.value.trim()).split(/\s+/).filter(Boolean);filtered=all.filter((e,i)=>terms.every(t=>index[i].includes(t)));grid.replaceChildren();shown=0;add();result.textContent=terms.length?(filtered.length?filtered.length+' episódio'+(filtered.length===1?' encontrado':'s encontrados'):'Não foram encontrados episódios. Experimente outra pesquisa.'):'';};
+ document.getElementById('search-form').addEventListener('submit',e=>e.preventDefault());
+ search.addEventListener('input',filter);document.getElementById('search-form').addEventListener('reset',()=>{search.value='';filter();search.focus()});
+ more.addEventListener('click',()=>{const first=shown;add();grid.children[first]?.focus({preventScroll:true})});
+ let count=20;try{search.value=sessionStorage.getItem('pi-search')||'';count=Number(sessionStorage.getItem('pi-visible'))||20}catch(_){}filter();while(shown<count&&shown<filtered.length)add();
+ grid.addEventListener('click',()=>{try{sessionStorage.setItem('pi-visible',String(shown));sessionStorage.setItem('pi-search',search.value)}catch(_){}});
+ fetch('assets/vozes.json').then(r=>{if(!r.ok)throw Error();return r.json()}).then(voices=>{
+  const container=document.getElementById('voices');
+  for(const voice of voices){
+   if(!voice.nome||!voice.foto)continue;
+   const button=document.createElement('button');button.type='button';button.className='voice';button.title=voice.nome;button.setAttribute('aria-label','Procurar episódios com '+voice.nome);
+   const img=document.createElement('img');img.src=voice.foto;img.alt=voice.nome;img.loading='lazy';img.width=88;img.height=88;const name=document.createElement('span');name.textContent=voice.nome;button.append(img,name);
+   button.addEventListener('click',()=>{search.value=voice.nome;filter();search.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'})});container.append(button);
+  }
+  document.getElementById('voices-empty').hidden=container.children.length>0;
+ }).catch(()=>{});
 }
 const audio=document.getElementById('audio');
 if(audio){
