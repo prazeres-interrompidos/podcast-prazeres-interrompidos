@@ -1,0 +1,41 @@
+PRAZERES INTERROMPIDOS — PÁGINA DE EPISÓDIOS
+
+Inclui a página principal e páginas individuais dos episódios do RSS.
+Apresenta 20 episódios de cada vez. O botão «Ver mais» acrescenta os seguintes
+20 na mesma página. Cada episódio tem um endereço próprio e permanente,
+capa, título, data, duração, descrição, leitor de áudio e opções de partilha.
+
+PUBLICAR NO GITHUB PAGES
+1. Extraia o ZIP.
+2. Coloque TODO o conteúdo da pasta podcast-prazeres-interrompidos na raiz
+   de um repositório GitHub (por exemplo, «podcast-episodios»).
+   Inclua a pasta .github: contém a atualização automática.
+3. No GitHub, vá a Settings > Pages > Build and deployment > Source
+   e escolha «GitHub Actions».
+4. No separador Actions, abra «Atualizar episódios e publicar» e escolha
+   «Run workflow». O endereço da página aparece em Settings > Pages.
+
+O processo consulta o RSS de hora a hora e publica os novos episódios.
+O GitHub pode atrasar execuções programadas; «Run workflow» permite atualizar
+manualmente. As agendas podem ser desativadas em repositórios públicos após
+60 dias sem atividade. Os episódios disponíveis são os que o RSS fornece.
+
+COLOCAR NO SITE PRAZERES INTERROMPIDOS
+Pode acrescentar uma ligação para o endereço publicado ou incorporá-lo
+numa página do Google Sites em Inserir > Incorporar > Por URL.
+Para partilhar episódios, use os botões da página individual: as ligações
+apontam para essa página, com endereço próprio. As redes sociais decidem
+como apresentam e atualizam a pré-visualização da capa.
+
+OUTRA HOSPEDAGEM ESTÁTICA
+A pasta public contém o site pronto a publicar: carregue todo o seu conteúdo
+para a pasta pretendida do seu alojamento. Para atualizações automáticas,
+execute scripts/gerar.py periodicamente e publique novamente public.
+Para gerar metadados com o endereço público definitivo:
+python scripts/gerar.py --base-url https://o-seu-dominio.pt/podcast
+
+Não é necessário PHP, base de dados, chave de API ou serviço de conversão RSS.
+O RSS é obtido no processo de publicação, evitando bloqueios de acesso entre
+origens no navegador. O áudio e as capas são servidos pelos endereços do RSS.
+Os ficheiros MP3 e as capas não são copiados para o repositório.
+Os títulos, as descrições e as capas mantêm os conteúdos fornecidos no RSS.
