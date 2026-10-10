@@ -24,10 +24,9 @@ if(grid&&Array.isArray(window.EPISODES)){
  more.addEventListener('click',()=>{const first=shown;add();grid.children[first]?.focus({preventScroll:true})});
  let count=20;try{search.value=sessionStorage.getItem('pi-search')||'';count=Number(sessionStorage.getItem('pi-visible'))||20}catch(_){}filter();while(shown<count&&shown<filtered.length)add();
  grid.addEventListener('click',()=>{try{sessionStorage.setItem('pi-visible',String(shown));sessionStorage.setItem('pi-search',search.value)}catch(_){}});
- const feedStatus=document.createElement('p');feedStatus.className='feed-status';feedStatus.setAttribute('role','status');document.getElementById('search-form').before(feedStatus);
  let refreshing=false;
  const applyFeed=episodes=>{const signature=JSON.stringify(episodes);if(signature===JSON.stringify(all))return;const count=Math.max(20,shown);all.splice(0,all.length,...episodes);index=all.map(text);filter();while(shown<count&&shown<filtered.length)add();const counter=document.querySelector('.intro .count');if(counter)counter.textContent=all.length+' episódios para descobrir';};
- const refresh=async()=>{if(refreshing)return;refreshing=true;feedStatus.textContent='A procurar novos episódios…';try{applyFeed(await PI.getFeed());feedStatus.textContent='RSS atualizado às '+new Intl.DateTimeFormat('pt-PT',{timeZone:'Europe/Lisbon',hour:'2-digit',minute:'2-digit'}).format(new Date())+'.';}catch(_){feedStatus.textContent='Não foi possível consultar o RSS. Mantemos os episódios disponíveis e voltaremos a tentar.';}finally{refreshing=false;}};
+ const refresh=async()=>{if(refreshing)return;refreshing=true;try{applyFeed(await PI.getFeed());}catch(_){/* Mantém os episódios disponíveis e repete a consulta automaticamente. */}finally{refreshing=false;}};
  if(window.PI){const cache=PI.cached();if(cache.length&&Date.parse(cache[0]?.dateISO)>Date.parse(all[0]?.dateISO))applyFeed(cache);refresh();setInterval(()=>{if(!document.hidden&&navigator.onLine)refresh()},60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});window.addEventListener('online',refresh);}
  fetch('assets/vozes.json').then(r=>{if(!r.ok)throw Error();return r.json()}).then(voices=>{
   const container=document.getElementById('voices');
