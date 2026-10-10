@@ -28,3 +28,5 @@ header,main{max-width:none;width:100%;margin-left:0;margin-right:0}header{paddin
 .extra-share-options{display:flex;flex-basis:100%;flex-wrap:wrap;gap:8px;padding-top:10px;border-top:1px solid #527f79;margin-top:6px}.extra-share-options a{color:#fff;background:#153f3c;border:1px solid #527f79;border-radius:8px;padding:8px 12px;font-size:13px;text-decoration:none}
 
 .extra-share-options button{color:#fff!important;background:#153f3c!important;border:1px solid #527f79!important;border-radius:8px;padding:8px 12px!important;font-size:13px!important}.app-share-hint{flex-basis:100%;font-size:13px;color:#c9dfdc;overflow-wrap:anywhere}.app-share-hint:empty{display:none}.app-share-copy{width:100%;background:#000;color:#fff}
+
+.playlist-delete-confirm{padding:14px;margin:14px 0;border:1px solid #91616b;border-radius:10px;background:#241619}.playlist-delete-confirm p{margin:0 0 10px}.playlist-delete-confirm button{background:#153f3c;color:#fff;border:1px solid #527f79;border-radius:8px;padding:9px 14px;margin-right:10px;font-size:13px}
