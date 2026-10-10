@@ -6,11 +6,12 @@ if(grid&&Array.isArray(window.EPISODES)){
  let filtered=all,shown=0;
  const normalize=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-PT');
  const text=e=>{const doc=new DOMParser().parseFromString(e.description||'','text/html');return normalize(e.title+' '+doc.body.textContent+' '+e.date)};
- const index=all.map(text);
+ let index=all.map(text);
+ const published=new Set(all.map(e=>e.id));
  const add=()=>{
   const frag=document.createDocumentFragment();
   for(const e of filtered.slice(shown,shown+20)){
-   const link=document.createElement('a');link.className='card';link.href='episodios/'+e.id+'/';
+   const link=document.createElement('a');link.className='card';link.href=published.has(e.id)?'episodios/'+e.id+'/':'episodio.html?id='+encodeURIComponent(e.id);
    const cover=document.createElement('div');cover.className='cover';const image=document.createElement('img');image.src=e.image;image.alt='Capa de '+e.title;image.loading='lazy';image.width=600;image.height=600;
    const listen=document.createElement('span');listen.className='listen';listen.textContent='▶ Ouvir episódio';cover.append(image,listen);
    const title=document.createElement('h2');title.textContent=e.title;const meta=document.createElement('p');meta.className='meta';const date=document.createElement('time');date.dateTime=e.dateISO;date.textContent=e.date;const duration=document.createElement('span');duration.textContent='◷ '+e.duration;meta.append(date,duration);link.append(cover,title,meta);frag.append(link);
@@ -23,6 +24,11 @@ if(grid&&Array.isArray(window.EPISODES)){
  more.addEventListener('click',()=>{const first=shown;add();grid.children[first]?.focus({preventScroll:true})});
  let count=20;try{search.value=sessionStorage.getItem('pi-search')||'';count=Number(sessionStorage.getItem('pi-visible'))||20}catch(_){}filter();while(shown<count&&shown<filtered.length)add();
  grid.addEventListener('click',()=>{try{sessionStorage.setItem('pi-visible',String(shown));sessionStorage.setItem('pi-search',search.value)}catch(_){}});
+ const feedStatus=document.createElement('p');feedStatus.className='feed-status';feedStatus.setAttribute('role','status');document.getElementById('search-form').before(feedStatus);
+ let refreshing=false;
+ const applyFeed=episodes=>{const signature=JSON.stringify(episodes);if(signature===JSON.stringify(all))return;const count=Math.max(20,shown);all.splice(0,all.length,...episodes);index=all.map(text);filter();while(shown<count&&shown<filtered.length)add();const counter=document.querySelector('.intro .count');if(counter)counter.textContent=all.length+' episódios para descobrir';};
+ const refresh=async()=>{if(refreshing)return;refreshing=true;feedStatus.textContent='A procurar novos episódios…';try{applyFeed(await PI.getFeed());feedStatus.textContent='RSS atualizado às '+new Intl.DateTimeFormat('pt-PT',{timeZone:'Europe/Lisbon',hour:'2-digit',minute:'2-digit'}).format(new Date())+'.';}catch(_){feedStatus.textContent='Não foi possível consultar o RSS. Mantemos os episódios disponíveis e voltaremos a tentar.';}finally{refreshing=false;}};
+ if(window.PI){const cache=PI.cached();if(cache.length&&Date.parse(cache[0]?.dateISO)>Date.parse(all[0]?.dateISO))applyFeed(cache);refresh();setInterval(()=>{if(!document.hidden&&navigator.onLine)refresh()},60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});window.addEventListener('online',refresh);}
  fetch('assets/vozes.json').then(r=>{if(!r.ok)throw Error();return r.json()}).then(voices=>{
   const container=document.getElementById('voices');
   for(const voice of voices){
@@ -34,8 +40,10 @@ if(grid&&Array.isArray(window.EPISODES)){
   document.getElementById('voices-empty').hidden=container.children.length>0;
  }).catch(()=>{});
 }
+window.initEpisodePlayer=function(){
 const audio=document.getElementById('audio');
-if(audio){
+if(audio&&!audio.dataset.initialized){
+audio.dataset.initialized='true';
  const play=document.getElementById('play'),seek=document.getElementById('seek'),current=document.getElementById('current'),total=document.getElementById('total'),status=document.getElementById('player-status'),error=document.getElementById('audio-error');
  const format=(s)=>{s=Math.max(0,Math.floor(s||0));return(s>=3600?Math.floor(s/3600)+':'+String(Math.floor(s/60)%60).padStart(2,'0'):Math.floor(s/60))+':'+String(s%60).padStart(2,'0')};
  const state=()=>{play.textContent=audio.paused?'▶':'Ⅱ';play.setAttribute('aria-label',audio.paused?'Reproduzir':'Pausar');status.textContent=audio.paused?'Ouvir este episódio':'A ouvir…'};
@@ -74,3 +82,6 @@ if(audio){
  });
  if('mediaSession' in navigator&&'MediaMetadata' in window){navigator.mediaSession.metadata=new MediaMetadata({title,artist:'Prazeres Interrompidos',artwork:[{src:document.querySelector('.episode-cover img').src}]})}
 }
+
+};
+if(!document.body.hasAttribute("data-live-episode"))window.initEpisodePlayer();

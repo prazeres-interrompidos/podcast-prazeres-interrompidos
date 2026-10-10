@@ -1,0 +1,33 @@
+ATUALIZAÇÃO DIRETA DO RSS — SEM CLOUDFLARE
+
+Copie o conteúdo da pasta podcast-prazeres-interrompidos para a pasta atual
+do repositório. Aceite substituir os ficheiros. Faça Commit e Push origin.
+Aguarde a publicação terminar e recarregue a página (Ctrl+F5).
+
+O ZIP não inclui vozes.json: conserva as fotografias que já configurou.
+
+COMO FUNCIONA
+A página mostra imediatamente os episódios disponíveis e consulta o RSS
+pelo navegador, usando um endereço diferente para evitar versões em cache.
+Enquanto estiver aberta e visível, repete a consulta aproximadamente a cada
+minuto. Também consulta ao voltar ao separador ou recuperar a ligação.
+O botão Atualizar episódios permite pedir uma consulta imediata.
+A pesquisa e Ver mais passam a usar também os episódios obtidos diretamente.
+Se a consulta falhar, mantém o conteúdo e tenta novamente no ciclo seguinte.
+
+PÁGINAS DOS NOVOS EPISÓDIOS
+Os episódios cuja página estática ainda não foi gerada abrem em:
+episodio.html?id=episodio-IDENTIFICADOR
+Este endereço permite ouvir, descarregar e partilhar o novo episódio sem
+esperar pelo GitHub. O conteúdo é obtido do RSS, com cópia local de recurso.
+As páginas antigas e os seus endereços continuam disponíveis.
+O GitHub continua a gerar páginas estáticas para melhorar a indexação e as
+pré-visualizações de partilha. As redes sociais podem não apresentar capa
+ou descrição em ligações dinâmicas antes dessa geração.
+
+LIMITE REAL
+A consulta depende de uma ligação à Internet e de o servidor do RSS responder.
+O navegador pode suspender separadores em segundo plano: quando volta à
+página, ela consulta novamente. Não se atualiza uma página fechada; ao abrir,
+consulta o RSS. Não é possível garantir disponibilidade absoluta dos serviços.
+Não é necessário instalar o verificador Cloudflare nem criar outra conta.
