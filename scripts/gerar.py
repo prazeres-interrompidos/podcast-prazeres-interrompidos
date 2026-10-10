@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Gera páginas estáticas a partir do RSS, sem dependências externas."""
-import argparse, hashlib, html, json, os, re, shutil, unicodedata, urllib.request
+import argparse, hashlib, html, json, os, re, shutil, time, unicodedata, urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from email.utils import parsedate_to_datetime
@@ -50,8 +50,17 @@ def main():
  parser=argparse.ArgumentParser(); parser.add_argument('--feed-file'); parser.add_argument('--base-url',default=os.environ.get('SITE_URL','')); args=parser.parse_args()
  if args.feed_file: raw=Path(args.feed_file).read_bytes()
  else:
-  request=urllib.request.Request(FEED,headers={'User-Agent':'PrazeresInterrompidos/1.0'})
-  with urllib.request.urlopen(request,timeout=90) as response: raw=response.read()
+  # Um endereço diferente por execução evita reutilizar uma versão antiga do RSS.
+  for attempt in range(3):
+   try:
+    feed_url=FEED+'?refresh='+str(time.time_ns())
+    request=urllib.request.Request(feed_url,headers={'User-Agent':'PrazeresInterrompidos/1.1','Cache-Control':'no-cache, no-store','Pragma':'no-cache'})
+    with urllib.request.urlopen(request,timeout=90) as response: raw=response.read()
+    if ET.fromstring(raw).find('channel') is None: raise RuntimeError('RSS sem canal')
+    break
+   except Exception:
+    if attempt==2: raise
+    time.sleep(3*(attempt+1))
  channel=ET.fromstring(raw).find('channel')
  if channel is None: raise RuntimeError('RSS sem canal')
  fallback=channel.find('i:image',NS); fallback=url(fallback.get('href','')) if fallback is not None else ''
@@ -92,4 +101,5 @@ def main():
   (out/'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+''.join('<url><loc>'+esc(u)+'</loc></url>' for u in urls)+'</urlset>',encoding='utf-8')
   (out/'robots.txt').write_text('User-agent: *\nAllow: /\nSitemap: '+base+'/sitemap.xml\n',encoding='utf-8')
  print(f'Gerados {len(items)} episódios em {out}')
+ print('Episódio mais recente:',items[0]['title'],items[0]['date'])
 if __name__=='__main__': main()
