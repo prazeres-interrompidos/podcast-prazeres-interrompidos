@@ -4,6 +4,14 @@ const grid=document.getElementById('episodes');
 if(grid&&Array.isArray(window.EPISODES)){
  const all=window.EPISODES,more=document.getElementById('more'),progress=document.getElementById('progress'),search=document.getElementById('search'),result=document.getElementById('search-result');
  let filtered=all,shown=0;
+ const dateFilters=document.createElement('div');dateFilters.className='date-filters';
+ const makeSelect=(id,label,first)=>{const wrap=document.createElement('label');wrap.htmlFor=id;wrap.textContent=label;const select=document.createElement('select');select.id=id;select.add(new Option(first,''));wrap.append(select);dateFilters.append(wrap);return select};
+ const year=makeSelect('filter-year','Ano','Todos os anos'),month=makeSelect('filter-month','Mês','Todos os meses');
+ ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'].forEach((name,i)=>month.add(new Option(name,String(i+1).padStart(2,'0'))));
+ document.getElementById('search-form').append(dateFilters);
+ const dateParts=e=>{const match=(e.date||'').match(/^(\d{2})[\/.-](\d{2})[\/.-](\d{4})$/);if(match)return {year:match[3],month:match[2]};const d=new Date(e.dateISO);if(!Number.isFinite(d.getTime()))return {};const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Lisbon',year:'numeric',month:'2-digit'}).formatToParts(d);return Object.fromEntries(parts.filter(p=>p.type==='year'||p.type==='month').map(p=>[p.type,p.value]))};
+ const updateYears=()=>{const selected=year.value;year.replaceChildren(new Option('Todos os anos',''));[...new Set(all.map(e=>dateParts(e).year).filter(Boolean))].sort().reverse().forEach(value=>year.add(new Option(value,value)));if([...year.options].some(o=>o.value===selected))year.value=selected};updateYears();
+
  const normalize=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-PT');
  const text=e=>{const doc=new DOMParser().parseFromString(e.description||'','text/html');return normalize(e.title+' '+doc.body.textContent+' '+e.date)};
  let index=all.map(text);
@@ -18,15 +26,15 @@ if(grid&&Array.isArray(window.EPISODES)){
   }
   grid.append(frag);shown=grid.children.length;progress.textContent=filtered.length?shown+' de '+filtered.length+' episódios':'';more.hidden=shown>=filtered.length;
  };
- const filter=()=>{const terms=normalize(search.value.trim()).split(/\s+/).filter(Boolean);filtered=all.filter((e,i)=>terms.every(t=>index[i].includes(t)));grid.replaceChildren();shown=0;add();result.textContent=terms.length?(filtered.length?filtered.length+' episódio'+(filtered.length===1?' encontrado':'s encontrados'):'Não foram encontrados episódios. Experimente outra pesquisa.'):'';};
+ const filter=()=>{const terms=normalize(search.value.trim()).split(/\s+/).filter(Boolean);filtered=all.filter((e,i)=>terms.every(t=>index[i].includes(t))&&(!year.value||dateParts(e).year===year.value)&&(!month.value||dateParts(e).month===month.value));grid.replaceChildren();shown=0;add();result.textContent=(terms.length||year.value||month.value)?(filtered.length?filtered.length+' episódio'+(filtered.length===1?' encontrado':'s encontrados'):'Não foram encontrados episódios. Experimente outra pesquisa.'):'';};
  document.getElementById('search-form').addEventListener('submit',e=>e.preventDefault());
- search.addEventListener('input',filter);document.getElementById('search-form').addEventListener('reset',()=>{search.value='';filter();search.focus()});
+ year.addEventListener('change',filter);month.addEventListener('change',filter);search.addEventListener('input',filter);document.getElementById('search-form').addEventListener('reset',()=>{search.value='';year.value='';month.value='';filter();search.focus()});
  more.addEventListener('click',()=>{const first=shown;add();grid.children[first]?.focus({preventScroll:true})});
- let count=20;try{search.value=sessionStorage.getItem('pi-search')||'';count=Number(sessionStorage.getItem('pi-visible'))||20}catch(_){}filter();while(shown<count&&shown<filtered.length)add();
- grid.addEventListener('click',()=>{try{sessionStorage.setItem('pi-visible',String(shown));sessionStorage.setItem('pi-search',search.value)}catch(_){}});
+ let count=20;try{search.value=sessionStorage.getItem('pi-search')||'';year.value=sessionStorage.getItem('pi-year')||'';month.value=sessionStorage.getItem('pi-month')||'';count=Number(sessionStorage.getItem('pi-visible'))||20}catch(_){}filter();while(shown<count&&shown<filtered.length)add();
+ grid.addEventListener('click',()=>{try{sessionStorage.setItem('pi-visible',String(shown));sessionStorage.setItem('pi-search',search.value);sessionStorage.setItem('pi-year',year.value);sessionStorage.setItem('pi-month',month.value)}catch(_){}});
  let refreshing=false;
- const applyFeed=episodes=>{const signature=JSON.stringify(episodes);if(signature===JSON.stringify(all))return;const count=Math.max(20,shown);all.splice(0,all.length,...episodes);index=all.map(text);filter();while(shown<count&&shown<filtered.length)add();const counter=document.querySelector('.intro .count');if(counter)counter.textContent=all.length+' episódios para descobrir';};
- const refresh=async()=>{if(refreshing)return;refreshing=true;try{applyFeed(await PI.getFeed());}catch(_){/* Mantém os episódios disponíveis e repete a consulta automaticamente. */}finally{refreshing=false;}};
+ const applyFeed=episodes=>{const signature=JSON.stringify(episodes);if(signature===JSON.stringify(all))return;const count=Math.max(20,shown);all.splice(0,all.length,...episodes);index=all.map(text);updateYears();filter();while(shown<count&&shown<filtered.length)add();const counter=document.querySelector('.intro .count');if(counter)counter.textContent=all.length+' episódios para descobrir';};
+ const refresh=async()=>{if(refreshing)return;refreshing=true;try{applyFeed(await PI.getFeed());}catch(_){}finally{refreshing=false;}};
  if(window.PI){const cache=PI.cached();if(cache.length&&Date.parse(cache[0]?.dateISO)>Date.parse(all[0]?.dateISO))applyFeed(cache);refresh();setInterval(()=>{if(!document.hidden&&navigator.onLine)refresh()},60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});window.addEventListener('online',refresh);}
  fetch('assets/vozes.json').then(r=>{if(!r.ok)throw Error();return r.json()}).then(voices=>{
   const container=document.getElementById('voices');
