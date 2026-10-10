@@ -1,0 +1,7 @@
+Copie todos os ficheiros deste ZIP para a pasta atual do repositório,
+aceitando substituir. Inclua scripts/gerar.py: é essencial, porque o workflow
+regenera as páginas a cada publicação. Faça Commit e Push origin.
+Aguarde o visto verde no GitHub Actions e recarregue a página.
+A página inclui agora assets/live.js com identificação de versão.
+A atualização automática está ativa no código, sem botão manual.
+Conserva fotografias das vozes e estilos existentes.
