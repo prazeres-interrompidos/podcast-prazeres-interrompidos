@@ -115,8 +115,7 @@ if(grid&&Array.isArray(window.EPISODES)){
   let voices=[];
   try{const r=await fetch('assets/vozes.json');if(r.ok)voices=await r.json()}catch(_){}
   try{
-   const fallbackNames=voices.map(v=>v.nome).filter(Boolean).join('\n'),query=new URLSearchParams({fallback:fallbackNames});
-   const r=await fetch('https://parcerias-prazeres-interrompidos.jauntymink64.chatgpt.site/api/voices?'+query.toString());
+   const r=await fetch('https://parcerias-prazeres-interrompidos.jauntymink64.chatgpt.site/api/voices');
    if(r.ok){const managed=await r.json(),key=s=>String(s||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLocaleLowerCase('pt-PT').trim(),merged=new Map(voices.filter(v=>v.nome&&v.foto).map(v=>[key(v.nome),v]));(managed.hidden||[]).forEach(n=>merged.delete(key(n)));(managed.voices||[]).forEach(v=>{if(v.nome&&v.foto)merged.set(key(v.nome),v)});voices=[...merged.values()]}
   }catch(_){}
   const container=document.getElementById('voices');
