@@ -111,7 +111,13 @@ if(grid&&Array.isArray(window.EPISODES)){
  const applyFeed=episodes=>{const signature=JSON.stringify(episodes);if(signature===JSON.stringify(all))return;const count=Math.max(20,shown);all.splice(0,all.length,...episodes);index=all.map(text);updateYears();updateFavCount();playlists.refresh();filter();while(shown<count&&shown<filtered.length)add();const counter=document.querySelector('.intro .count');if(counter)counter.textContent=all.length+' episódios para descobrir';};
  const refresh=async()=>{if(refreshing)return;refreshing=true;try{applyFeed(await PI.getFeed());}catch(_){}finally{refreshing=false;}};
  if(window.PI){const cache=PI.cached();if(cache.length&&Date.parse(cache[0]?.dateISO)>Date.parse(all[0]?.dateISO))applyFeed(cache);refresh();setInterval(()=>{if(!document.hidden&&navigator.onLine)refresh()},60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});window.addEventListener('online',refresh);}
- fetch('assets/vozes.json').then(r=>{if(!r.ok)throw Error();return r.json()}).then(voices=>{
+ (async()=>{
+  let voices=[];
+  try{const r=await fetch('assets/vozes.json');if(r.ok)voices=await r.json()}catch(_){}
+  try{
+   const r=await fetch('https://parcerias-prazeres-interrompidos.jauntymink64.chatgpt.site/api/voices');
+   if(r.ok){const managed=await r.json(),key=s=>String(s||'').normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLocaleLowerCase('pt-PT').trim(),merged=new Map(voices.filter(v=>v.nome&&v.foto).map(v=>[key(v.nome),v]));(managed.hidden||[]).forEach(n=>merged.delete(key(n)));(managed.voices||[]).forEach(v=>{if(v.nome&&v.foto)merged.set(key(v.nome),v)});voices=[...merged.values()]}
+  }catch(_){}
   const container=document.getElementById('voices');
   for(const voice of voices){
    if(!voice.nome||!voice.foto)continue;
@@ -120,7 +126,7 @@ if(grid&&Array.isArray(window.EPISODES)){
    button.addEventListener('click',()=>{search.value=voice.nome;filter();search.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'})});container.append(button);
   }
   document.getElementById('voices-empty').hidden=container.children.length>0;
- }).catch(()=>{});
+ })().catch(()=>{});
 }
 window.initEpisodePlayer=function(){
 const audio=document.getElementById('audio');
