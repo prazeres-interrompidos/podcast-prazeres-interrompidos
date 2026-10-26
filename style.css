@@ -34,3 +34,5 @@ header,main{max-width:none;width:100%;margin-left:0;margin-right:0}header{paddin
 .playlist-name-status{color:#b4dfd8;font-size:14px;margin:12px 0}.playlist-name-status:empty{display:none}
 
 .app-install-wrap{margin:22px 0 18px}.app-install-button{display:inline-flex;align-items:center;padding:13px 23px;border-radius:30px;background:#153f3c;color:#fff;text-decoration:none;font-weight:700;font-size:14px;box-shadow:0 4px 14px #153f3c35;transition:transform .18s,background .18s}.app-install-button:hover{background:#225953;transform:translateY(-1px)}.app-install-button:focus-visible{outline:3px solid #bd7026;outline-offset:4px}
+
+.date-filters{flex-wrap:wrap}.date-filters label{min-width:130px}.date-filters label:has(#filter-rubric){flex:1.5;min-width:180px}
