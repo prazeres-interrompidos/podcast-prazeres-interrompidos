@@ -38,3 +38,5 @@ header,main{max-width:none;width:100%;margin-left:0;margin-right:0}header{paddin
 .date-filters{flex-wrap:wrap}.date-filters label{min-width:130px}.date-filters label:has(#filter-rubric){flex:1.5;min-width:180px}
 
 .date-filters label:has(#filter-choice-person){flex:2 0 340px;min-width:340px}.date-filters #filter-choice-person{width:100%;padding-right:34px}@media(max-width:600px){.date-filters label:has(#filter-choice-person){flex-basis:100%;min-width:0;width:100%}.date-filters #filter-choice-person{font-size:14px}}
+
+.search .clear-filters{align-self:flex-end;flex:0 0 auto;margin-bottom:8px;min-height:46px;padding:10px 18px;border:1px solid #527f79;border-radius:10px;background:#153f3c;color:#fff;font-size:14px}.search .clear-filters:hover{background:#225953}
