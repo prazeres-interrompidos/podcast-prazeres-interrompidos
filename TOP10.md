@@ -1,0 +1,11 @@
+# Destaque diário Apple Podcasts
+
+A página consulta `public/latest.json` do repositório `top-apple-podcasts-prazeres-interrompidos`, atualizado pela monitorização existente às 09h00, 13h00 e 20h00 em Europe/Lisbon. Cada visitante consulta esse pequeno resumo, sem pedir listas à Apple e sem guardar classificações no navegador.
+
+O destaque apresenta a melhor posição do dia por país e categoria (Livros, Arte, Top Geral de Programas), apenas entre 1 e 10, com fonte Apple e classificação comprovada sem divergência. A data é sempre a de Lisboa. Em caso de dados antigos, erro ou ausência de resultados elegíveis, o destaque fica oculto. A página volta a consultar o resumo de cinco em cinco minutos, quando regressa ao primeiro plano e quando recupera a ligação.
+
+No ecrã principal da app instalada, há um destaque Top 10 e uma entrada permanente «Observatório do Podcast». Os dados online não entram na cache offline da app.
+
+Testes: `node --test apple-top10.test.mjs`.
+
+Os ficheiros `apple-top10.js` e `apple-top10.css` são iguais nas duas páginas. Ao alterá-los, atualizar a versão nos respetivos URLs e, na app, a versão da cache de `sw.js`. No site dos episódios, o gerador copia os ficheiros para `public/assets` e inclui o destaque só na página inicial, preservando-o nas atualizações do RSS.
