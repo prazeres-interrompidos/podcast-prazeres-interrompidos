@@ -1,5 +1,5 @@
 // Shared by the episode homepage and the official app. No chart lists are stored.
-const FEED_URL = 'https://raw.githubusercontent.com/prazeres-interrompidos/top-apple-podcasts-prazeres-interrompidos/main/public/latest.json';
+const FEED_URL = 'https://prazeres-interrompidos-apple-rankings.oct-nuno.chatgpt.site/api/rankings/latest.json';
 const CATEGORIES = new Map([['1482', 'Livros'], ['1301', 'Arte'], ['26', 'Top Geral de Programas']]);
 const categoryOrder = ['1482', '1301', '26'];
 const dayFormat = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Lisbon', year: 'numeric', month: '2-digit', day: '2-digit' });
