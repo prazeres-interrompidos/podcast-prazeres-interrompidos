@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 const source = await readFile(new URL('./apple-top10.js', import.meta.url), 'utf8');
-const { lisbonDay, latestCollectionDay, selectTop10 } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+const { lisbonDay, latestCollectionDay, selectRankings } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
 const now = new Date('2026-11-19T12:00:00Z');
 const observation = {
   apple_id: '1633619845', country: 'pt', category: '1482', chart_type: 'shows',
@@ -21,7 +21,7 @@ test('Uses the Lisbon date across summer time and the autumn clock change', () =
   assert.equal(lisbonDay(new Date('2026-11-19T23:30:00Z')), '2026-11-19');
 });
 
-test('Includes rank 10, excludes rank 11, and keeps the daily best for each country/category', () => {
+test('Includes category Top 10 and every recorded general-chart position, keeping the daily best', () => {
   const data = payload([
     { ...observation, rank: 8 }, { ...observation, rank: 3 },
     { ...observation, category: '1301', rank: 10 },
@@ -29,15 +29,29 @@ test('Includes rank 10, excludes rank 11, and keeps the daily best for each coun
     { ...observation, country: 'br', rank: 2 },
     { ...observation, country: 'mo', source: 'apple_rss', rank: 1 }
   ]);
-  assert.deepEqual(selectTop10(data, now).map(r => [r.country, r.category, r.rank]),
-    [['pt', '1482', 3], ['pt', '1301', 10], ['br', '1482', 2], ['mo', '1482', 1]]);
+  assert.deepEqual(selectRankings(data, now).map(r => [r.country, r.category, r.rank]),
+    [['pt', '1482', 3], ['pt', '1301', 10], ['pt', '26', 11], ['br', '1482', 2], ['mo', '1482', 1]]);
 });
 
 test('Retains valid results from a partial collection but rejects incomplete or diagnostic rounds', () => {
-  assert.equal(selectTop10(payload(undefined, 'partial'), now).length, 1);
-  for (const status of ['running', 'error']) assert.deepEqual(selectTop10(payload(undefined, status), now), []);
+  assert.equal(selectRankings(payload(undefined, 'partial'), now).length, 1);
+  for (const status of ['running', 'error']) assert.deepEqual(selectRankings(payload(undefined, status), now), []);
   const data = payload(); data.run.scope = 'diagnostic';
-  assert.deepEqual(selectTop10(data, now), []);
+  assert.deepEqual(selectRankings(data, now), []);
+});
+
+test('General-chart positions outside Top 10 remain visible even when neither category is in Top 10', () => {
+  for (const rank of [11, 75, 166, 200, 250]) {
+    const data = payload([
+      { ...observation, category: '1482', rank: 11 },
+      { ...observation, category: '1301', rank: 15 },
+      { ...observation, category: '26', rank }
+    ]);
+    assert.deepEqual(selectRankings(data, now).map(r => [r.category, r.rank]), [['26', rank]]);
+  }
+  for (const change of [{ rank: null, status: 'not_found' }, { rank: '166' }, { rank: 0 }, { rank: 166, divergent: true }]) {
+    assert.deepEqual(selectRankings(payload([{ ...observation, category: '26', ...change }]), now), []);
+  }
 });
 
 test('Uses the latest completed collection date, rejecting undated, inconsistent or future observations', () => {
@@ -45,21 +59,21 @@ test('Uses the latest completed collection date, rejecting undated, inconsistent
     { date: '2026-11-18' }, { date: '' }, { date: '2026-11-20' },
     { observed_at_utc: '2026-11-18T23:59:00Z' },
     { observed_at_utc: '2026-11-19T13:00:00Z' }, { observed_at_utc: 'invalid' }
-  ]) assert.deepEqual(selectTop10(payload([{ ...observation, ...change }]), now), []);
+  ]) assert.deepEqual(selectRankings(payload([{ ...observation, ...change }]), now), []);
   assert.equal(latestCollectionDay(payload(), new Date('2026-11-20T00:00:00Z')), '2026-11-19');
-  assert.equal(selectTop10(payload(), new Date('2026-11-20T00:00:00Z'))[0].date, '2026-11-19');
+  assert.equal(selectRankings(payload(), new Date('2026-11-20T00:00:00Z'))[0].date, '2026-11-19');
   const future = payload(); future.run.finished_at_utc = '2026-11-20T09:00:00Z';
-  assert.deepEqual(selectTop10(future, now), []);
+  assert.deepEqual(selectRankings(future, now), []);
   const missing = payload(); delete missing.run.finished_at_utc;
-  assert.deepEqual(selectTop10(missing, now), []);
+  assert.deepEqual(selectRankings(missing, now), []);
 });
 
-test('A new collection without Top 10 results never resurrects an earlier Top 10', () => {
+test('A new collection without eligible results never resurrects an earlier result', () => {
   const data = payload([{ ...observation, rank: 11, date: '2026-11-20', observed_at_utc: '2026-11-20T09:00:00Z' }, observation]);
   data.run.finished_at_utc = '2026-11-20T09:05:00Z';
-  assert.deepEqual(selectTop10(data, new Date('2026-11-20T10:00:00Z')), []);
+  assert.deepEqual(selectRankings(data, new Date('2026-11-20T10:00:00Z')), []);
   data.run.observations = [];
-  assert.deepEqual(selectTop10(data, new Date('2026-11-20T10:00:00Z')), []);
+  assert.deepEqual(selectRankings(data, new Date('2026-11-20T10:00:00Z')), []);
 });
 
 test('Excludes divergent, unverified, malformed and unrelated records', () => {
@@ -67,10 +81,10 @@ test('Excludes divergent, unverified, malformed and unrelated records', () => {
     { divergent: true }, { quality: 'nao_verificavel' }, { status: 'not_found' },
     { source: 'historical' }, { rank: 0 }, { rank: -1 }, { rank: '3' }, { rank: 1.5 },
     { apple_id: 'another-show' }, { chart_type: 'episodes' }, { category: '9999' }, { country: '' }
-  ]) assert.deepEqual(selectTop10(payload([{ ...observation, ...change }]), now), []);
-  assert.deepEqual(selectTop10(null, now), []);
-  assert.deepEqual(selectTop10({ ...payload(), apple_id: 'another-show' }, now), []);
-  assert.deepEqual(selectTop10({ ...payload(), schema_version: 99 }, now), []);
+  ]) assert.deepEqual(selectRankings(payload([{ ...observation, ...change }]), now), []);
+  assert.deepEqual(selectRankings(null, now), []);
+  assert.deepEqual(selectRankings({ ...payload(), apple_id: 'another-show' }, now), []);
+  assert.deepEqual(selectRankings({ ...payload(), schema_version: 99 }, now), []);
 });
 
 test('The app installation page never starts the banner; the installed app and episode homepage do', async () => {
@@ -119,11 +133,11 @@ test('An open page keeps the dated result at midnight and during an outage, then
   context.mountTop10(section);
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(section.hidden, false);
-  assert.equal(title.textContent, 'Hoje no Top 10 da Apple Podcasts');
+  assert.equal(title.textContent, 'Hoje na Apple Podcasts');
   clock = new Date('2026-11-20T07:00:00Z');
   intervals.get(30000)();
   assert.equal(section.hidden, false);
-  assert.equal(title.textContent, 'Último registo no Top 10 da Apple Podcasts');
+  assert.equal(title.textContent, 'Últimos registos na Apple Podcasts');
   assert.equal(date.textContent, 'Registos de 19/11/2026');
   assert.equal(date.dateTime, '2026-11-19');
   offline = true;
@@ -135,7 +149,7 @@ test('An open page keeps the dated result at midnight and during an outage, then
   data = payload([{ ...observation, date: '2026-11-20', observed_at_utc: '2026-11-20T09:00:00Z', rank: 2 }]);
   data.run.finished_at_utc = '2026-11-20T09:05:00Z';
   await events.get('online')();
-  assert.equal(title.textContent, 'Hoje no Top 10 da Apple Podcasts');
+  assert.equal(title.textContent, 'Hoje na Apple Podcasts');
   assert.equal(date.textContent, '20/11/2026');
   data.run.observations[0].rank = 11;
   await events.get('online')();
