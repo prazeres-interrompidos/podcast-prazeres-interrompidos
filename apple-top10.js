@@ -26,7 +26,7 @@ export function selectRankings(data, now = new Date()) {
     if (!record || String(record.apple_id) !== '1633619845' || record.chart_type !== 'shows' ||
         record.date !== day || record.status !== 'ranked' || record.quality !== 'comprovado_na_lista' ||
         record.divergent !== false || !['apple_ids', 'apple_rss'].includes(record.source) ||
-        !Number.isInteger(record.rank) || record.rank < 1 || (record.category !== '26' && record.rank > 10) ||
+        !Number.isInteger(record.rank) || record.rank < 1 ||
         !CATEGORIES.has(record.category) || !/^[a-z]{2}$/.test(record.country)) continue;
     const observed = new Date(record.observed_at_utc);
     if (!Number.isFinite(observed.getTime()) || observed > now || lisbonDay(observed) !== day) continue;

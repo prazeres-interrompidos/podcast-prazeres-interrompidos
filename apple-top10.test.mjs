@@ -21,7 +21,7 @@ test('Uses the Lisbon date across summer time and the autumn clock change', () =
   assert.equal(lisbonDay(new Date('2026-11-19T23:30:00Z')), '2026-11-19');
 });
 
-test('Includes category Top 10 and every recorded general-chart position, keeping the daily best', () => {
+test('Keeps the daily best for every recorded chart position', () => {
   const data = payload([
     { ...observation, rank: 8 }, { ...observation, rank: 3 },
     { ...observation, category: '1301', rank: 10 },
@@ -40,14 +40,14 @@ test('Retains valid results from a partial collection but rejects incomplete or 
   assert.deepEqual(selectRankings(data, now), []);
 });
 
-test('General-chart positions outside Top 10 remain visible even when neither category is in Top 10', () => {
+test('Books, Arts and General positions outside Top 10 are all shown', () => {
   for (const rank of [11, 75, 166, 200, 250]) {
     const data = payload([
       { ...observation, category: '1482', rank: 11 },
       { ...observation, category: '1301', rank: 15 },
       { ...observation, category: '26', rank }
     ]);
-    assert.deepEqual(selectRankings(data, now).map(r => [r.category, r.rank]), [['26', rank]]);
+    assert.deepEqual(selectRankings(data, now).map(r => [r.category, r.rank]), [['1482', 11], ['1301', 15], ['26', rank]]);
   }
   for (const change of [{ rank: null, status: 'not_found' }, { rank: '166' }, { rank: 0 }, { rank: 166, divergent: true }]) {
     assert.deepEqual(selectRankings(payload([{ ...observation, category: '26', ...change }]), now), []);
@@ -69,7 +69,7 @@ test('Uses the latest completed collection date, rejecting undated, inconsistent
 });
 
 test('A new collection without eligible results never resurrects an earlier result', () => {
-  const data = payload([{ ...observation, rank: 11, date: '2026-11-20', observed_at_utc: '2026-11-20T09:00:00Z' }, observation]);
+  const data = payload([{ ...observation, rank: null, status: 'not_found', date: '2026-11-20', observed_at_utc: '2026-11-20T09:00:00Z' }, observation]);
   data.run.finished_at_utc = '2026-11-20T09:05:00Z';
   assert.deepEqual(selectRankings(data, new Date('2026-11-20T10:00:00Z')), []);
   data.run.observations = [];
@@ -152,6 +152,14 @@ test('An open page keeps the dated result at midnight and during an outage, then
   assert.equal(title.textContent, 'Hoje na Apple Podcasts');
   assert.equal(date.textContent, '20/11/2026');
   data.run.observations[0].rank = 11;
+  await events.get('online')();
+  assert.equal(section.hidden, false);
+  assert.equal(list.children[0].children[0].textContent, '11.º');
+  data.run.observations[0].rank = 75;
+  await events.get('online')();
+  assert.equal(section.hidden, false);
+  assert.equal(list.children[0].children[0].textContent, '75.º');
+  data.run.observations[0].status = 'not_found';
   await events.get('online')();
   assert.equal(section.hidden, true);
   assert.equal(list.children.length, 0);
