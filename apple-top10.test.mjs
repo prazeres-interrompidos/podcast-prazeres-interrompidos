@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 const source = await readFile(new URL('./apple-top10.js', import.meta.url), 'utf8');
-const { lisbonDay, selectTop10 } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+const { lisbonDay, latestCollectionDay, selectTop10 } = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
 const now = new Date('2026-11-19T12:00:00Z');
 const observation = {
   apple_id: '1633619845', country: 'pt', category: '1482', chart_type: 'shows',
@@ -11,7 +11,7 @@ const observation = {
   divergent: false, date: '2026-11-19', observed_at_utc: '2026-11-19T09:13:03Z'
 };
 function payload(records = [observation], status = 'completed') {
-  return { schema_version: 3, apple_id: '1633619845', run: { scope: 'global', status, observations: records } };
+  return { schema_version: 3, apple_id: '1633619845', run: { scope: 'global', status, finished_at_utc: '2026-11-19T09:17:00Z', observations: records } };
 }
 
 test('Uses the Lisbon date across summer time and the autumn clock change', () => {
@@ -40,13 +40,26 @@ test('Retains valid results from a partial collection but rejects incomplete or 
   assert.deepEqual(selectTop10(data, now), []);
 });
 
-test('Never labels stale, undated, inconsistent or future observations as today', () => {
+test('Uses the latest completed collection date, rejecting undated, inconsistent or future observations', () => {
   for (const change of [
     { date: '2026-11-18' }, { date: '' }, { date: '2026-11-20' },
     { observed_at_utc: '2026-11-18T23:59:00Z' },
     { observed_at_utc: '2026-11-19T13:00:00Z' }, { observed_at_utc: 'invalid' }
   ]) assert.deepEqual(selectTop10(payload([{ ...observation, ...change }]), now), []);
-  assert.deepEqual(selectTop10(payload(), new Date('2026-11-20T00:00:00Z')), []);
+  assert.equal(latestCollectionDay(payload(), new Date('2026-11-20T00:00:00Z')), '2026-11-19');
+  assert.equal(selectTop10(payload(), new Date('2026-11-20T00:00:00Z'))[0].date, '2026-11-19');
+  const future = payload(); future.run.finished_at_utc = '2026-11-20T09:00:00Z';
+  assert.deepEqual(selectTop10(future, now), []);
+  const missing = payload(); delete missing.run.finished_at_utc;
+  assert.deepEqual(selectTop10(missing, now), []);
+});
+
+test('A new collection without Top 10 results never resurrects an earlier Top 10', () => {
+  const data = payload([{ ...observation, rank: 11, date: '2026-11-20', observed_at_utc: '2026-11-20T09:00:00Z' }, observation]);
+  data.run.finished_at_utc = '2026-11-20T09:05:00Z';
+  assert.deepEqual(selectTop10(data, new Date('2026-11-20T10:00:00Z')), []);
+  data.run.observations = [];
+  assert.deepEqual(selectTop10(data, new Date('2026-11-20T10:00:00Z')), []);
 });
 
 test('Excludes divergent, unverified, malformed and unrelated records', () => {
@@ -82,4 +95,50 @@ test('The app installation page never starts the banner; the installed app and e
     assert.equal(requests, expected);
     assert.equal(section.hidden, true, 'Offline or installation pages never display a stale badge');
   }
+});
+
+test('An open page keeps the dated result at midnight and during an outage, then switches to the new day', async () => {
+  let clock = new Date('2026-11-19T23:59:00Z');
+  class ClockDate extends Date {
+    constructor(...args) { super(...(args.length ? args : [clock.getTime()])); }
+    static now() { return clock.getTime(); }
+  }
+  const element = () => ({ children: [], textContent: '', append(...nodes) { this.children.push(...nodes); }, replaceChildren(...nodes) { this.children = nodes; } });
+  const list = element(), title = element(), date = element();
+  const section = { hidden: true, querySelector: selector => selector === '[data-top10-list]' ? list : selector === '[data-top10-date]' ? date : title };
+  const intervals = new Map(), events = new Map();
+  let data = payload(), offline = false;
+  const context = {
+    document: { hidden: false, createElement: element, querySelectorAll: () => [], addEventListener() {} },
+    window: { addEventListener: (name, callback) => events.set(name, callback) },
+    Intl, Date: ClockDate, AbortController,
+    setInterval: (callback, delay) => intervals.set(delay, callback), setTimeout() {}, clearTimeout() {},
+    fetch: async () => { if (offline) throw new Error('Offline'); return { ok: true, json: async () => data }; }
+  };
+  vm.runInNewContext(source.replaceAll('export function ', 'function '), context);
+  context.mountTop10(section);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(section.hidden, false);
+  assert.equal(title.textContent, 'Hoje no Top 10 da Apple Podcasts');
+  clock = new Date('2026-11-20T07:00:00Z');
+  intervals.get(30000)();
+  assert.equal(section.hidden, false);
+  assert.equal(title.textContent, 'Último registo no Top 10 da Apple Podcasts');
+  assert.equal(date.textContent, 'Registos de 19/11/2026');
+  assert.equal(date.dateTime, '2026-11-19');
+  offline = true;
+  await events.get('online')();
+  assert.equal(section.hidden, false);
+  assert.equal(list.children.length, 1);
+  offline = false;
+  clock = new Date('2026-11-20T09:30:00Z');
+  data = payload([{ ...observation, date: '2026-11-20', observed_at_utc: '2026-11-20T09:00:00Z', rank: 2 }]);
+  data.run.finished_at_utc = '2026-11-20T09:05:00Z';
+  await events.get('online')();
+  assert.equal(title.textContent, 'Hoje no Top 10 da Apple Podcasts');
+  assert.equal(date.textContent, '20/11/2026');
+  data.run.observations[0].rank = 11;
+  await events.get('online')();
+  assert.equal(section.hidden, true);
+  assert.equal(list.children.length, 0);
 });

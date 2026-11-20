@@ -2,7 +2,7 @@
 
 A página consulta `public/latest.json` do repositório `top-apple-podcasts-prazeres-interrompidos`, atualizado pela monitorização existente às 09h00, 13h00 e 20h00 em Europe/Lisbon. Cada visitante consulta esse pequeno resumo, sem pedir listas à Apple e sem guardar classificações no navegador.
 
-O destaque apresenta a melhor posição do dia por país e categoria (Livros, Arte, Top Geral de Programas), apenas entre 1 e 10, com fonte Apple e classificação comprovada sem divergência. A data é sempre a de Lisboa. Em caso de dados antigos, erro ou ausência de resultados elegíveis, o destaque fica oculto. A página volta a consultar o resumo de cinco em cinco minutos, quando regressa ao primeiro plano e quando recupera a ligação.
+O destaque apresenta a melhor posição do dia por país e categoria (Livros, Arte, Top Geral de Programas), apenas entre 1 e 10, com fonte Apple e classificação comprovada sem divergência. A data é sempre a de Lisboa. Até à recolha seguinte, o último dia confirmado continua visível com o título «Último registo no Top 10 da Apple Podcasts» e a data real. Uma nova recolha sem resultados no Top 10 oculta o destaque; não se recuperam classificações de dias anteriores. Se houver uma falha temporária de ligação, conserva-se apenas o resultado já confirmado na página, com a sua data. A página volta a consultar o resumo de cinco em cinco minutos, quando regressa ao primeiro plano e quando recupera a ligação.
 
 No ecrã principal da app instalada, há um destaque Top 10 e uma entrada permanente «Observatório do Podcast». Os dados online não entram na cache offline da app.
 

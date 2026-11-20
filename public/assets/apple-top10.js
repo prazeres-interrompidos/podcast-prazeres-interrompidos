@@ -9,13 +9,20 @@ export function lisbonDay(date = new Date()) {
   return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
-export function selectTop10(data, now = new Date()) {
-  const day = lisbonDay(now);
+export function latestCollectionDay(data, now = new Date()) {
   const run = data?.run;
   if (data?.schema_version !== 3 || String(data?.apple_id) !== '1633619845' ||
-      run?.scope !== 'global' || !['completed', 'partial'].includes(run.status) || !Array.isArray(run.observations)) return [];
+      run?.scope !== 'global' || !['completed', 'partial'].includes(run.status) || !Array.isArray(run.observations)) return '';
+  const completed = new Date(run.finished_at_utc);
+  if (!Number.isFinite(completed.getTime()) || completed > now) return '';
+  return lisbonDay(completed);
+}
+
+export function selectTop10(data, now = new Date()) {
+  const day = latestCollectionDay(data, now);
+  if (!day) return [];
   const best = new Map();
-  for (const record of run.observations) {
+  for (const record of data.run.observations) {
     if (!record || String(record.apple_id) !== '1633619845' || record.chart_type !== 'shows' ||
         record.date !== day || record.status !== 'ranked' || record.quality !== 'comprovado_na_lista' ||
         record.divergent !== false || !['apple_ids', 'apple_rss'].includes(record.source) ||
@@ -34,6 +41,7 @@ export function selectTop10(data, now = new Date()) {
 export function mountTop10(section) {
   const list = section.querySelector('[data-top10-list]');
   const dateLabel = section.querySelector('[data-top10-date]');
+  const title = section.querySelector('.apple-top10__title');
   let shownDay = '';
   let signature = '';
   let loading = false;
@@ -47,12 +55,17 @@ export function mountTop10(section) {
     shownDay = '';
   }
 
-  function expire() {
-    if (shownDay && shownDay !== lisbonDay()) hide();
+  function updateContext() {
+    if (!shownDay) return;
+    const today = shownDay === lisbonDay();
+    title.textContent = today ? 'Hoje no Top 10 da Apple Podcasts' : 'Último registo no Top 10 da Apple Podcasts';
+    const [year, month, date] = shownDay.split('-');
+    dateLabel.textContent = `${today ? '' : 'Registos de '}${date}/${month}/${year}`;
+    dateLabel.dateTime = shownDay;
   }
 
   async function refresh() {
-    expire();
+    updateContext();
     if (loading) return;
     loading = true;
     const controller = new AbortController();
@@ -64,7 +77,6 @@ export function mountTop10(section) {
       if (!response.ok) throw new Error('Rankings unavailable');
       const records = selectTop10(await response.json());
       if (!records.length) { hide(); return; }
-      const day = lisbonDay();
       const nextSignature = JSON.stringify(records.map(r => [r.date, r.country, r.category, r.rank]));
       if (signature !== nextSignature) {
         const cards = records.map(record => {
@@ -84,25 +96,24 @@ export function mountTop10(section) {
           return item;
         });
         list.replaceChildren(...cards);
-        const [year, month, date] = day.split('-');
-        dateLabel.textContent = `${date}/${month}/${year}`;
-        dateLabel.dateTime = day;
         signature = nextSignature;
       }
-      shownDay = day;
+      shownDay = records[0].date;
+      updateContext();
       section.hidden = false;
     } catch (_) {
-      hide();
+      // Keep an already verified result during a temporary connection failure.
+      updateContext();
     } finally {
       clearTimeout(timeout);
       loading = false;
     }
   }
 
-  // Clear yesterday's result even if a page stays open overnight or offline.
-  setInterval(expire, 30000);
+  // At midnight, relabel the last verified date until the next collection arrives.
+  setInterval(updateContext, 30000);
   setInterval(() => { if (!document.hidden) refresh(); }, 300000);
-  document.addEventListener('visibilitychange', () => { expire(); if (!document.hidden) refresh(); });
+  document.addEventListener('visibilitychange', () => { updateContext(); if (!document.hidden) refresh(); });
   window.addEventListener('pageshow', refresh);
   window.addEventListener('online', refresh);
   refresh();
