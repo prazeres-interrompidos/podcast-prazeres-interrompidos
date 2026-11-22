@@ -139,6 +139,33 @@ if(grid&&Array.isArray(window.EPISODES)){
   document.getElementById('voices-empty').hidden=container.children.length>0;
  })().catch(()=>{});
 }
+window.setupEpisodeSharePreview=function(sharing){
+ if(sharing.dataset.previewReady)return;sharing.dataset.previewReady='true';let bypass=false,source=null,data=null;
+ const dialog=document.createElement('dialog');dialog.className='share-preview-dialog';dialog.setAttribute('aria-labelledby','share-preview-heading');
+ const head=document.createElement('div');head.className='share-preview-head';const heading=document.createElement('h2');heading.id='share-preview-heading';heading.textContent='Pré-visualizar partilha';const close=document.createElement('button');close.type='button';close.textContent='Fechar';close.addEventListener('click',()=>dialog.close());head.append(heading,close);dialog.append(head);
+ const status=document.createElement('p');status.setAttribute('role','status');dialog.append(status);
+ const network=document.createElement('p');network.className='share-preview-network';dialog.append(network);
+ const card=document.createElement('article');card.className='share-preview-card';const img=document.createElement('img');const info=document.createElement('div');const domain=document.createElement('small'),title=document.createElement('h3'),description=document.createElement('p');info.append(domain,title,description);card.append(img,info);dialog.append(card);
+ const label=document.createElement('label');label.textContent='Ligação a partilhar';const input=document.createElement('input');input.readOnly=true;input.addEventListener('click',()=>input.select());label.append(input);dialog.append(label);
+ const note=document.createElement('p');note.className='share-preview-note';note.textContent='Pré-visualização indicativa. O recorte, os textos visíveis e a cache são definidos pela aplicação onde partilhas.';dialog.append(note);
+ const controls=document.createElement('div');controls.className='share-preview-controls';const proceed=document.createElement('button');proceed.type='button';controls.append(proceed);const debuggerLink=document.createElement('a');debuggerLink.textContent='Verificar no Facebook';debuggerLink.target='_blank';debuggerLink.rel='noopener noreferrer';controls.append(debuggerLink);dialog.append(controls);document.body.append(dialog);
+ const meta=(doc,key)=>doc.querySelector('meta[property="'+key+'"],meta[name="'+key+'"]')?.content||'';
+ const currentData=()=>({title:meta(document,'og:title'),description:meta(document,'og:description'),image:meta(document,'og:image'),url:document.querySelector('link[rel="canonical"]')?.href||location.href.split('#')[0]});
+ proceed.addEventListener('click',()=>{if(!source)return;dialog.close();bypass=true;try{source.click()}finally{bypass=false}});
+ const open=async trigger=>{source=trigger;data=null;card.hidden=true;proceed.disabled=true;debuggerLink.hidden=true;input.value='';network.textContent=trigger.textContent.trim();proceed.textContent=trigger.id==='copy'||trigger.textContent.includes('copiar ligação')?'Copiar ligação':'Continuar para partilhar';status.textContent='A verificar a página do episódio…';dialog.showModal();
+  try{let doc=document;let url=currentData().url;
+   if(document.body.hasAttribute('data-live-episode')){const id=new URLSearchParams(location.search).get('id');if(!/^episodio-[a-f0-9]{20}$/.test(id||''))throw Error();url=new URL('episodios/'+id+'/',location.href).href;const response=await fetch(url,{cache:'no-store'});if(!response.ok){status.textContent='A página individual deste episódio ainda não foi publicada. Já podes ouvi-lo; volta a tentar partilhar quando a atualização terminar.';return}doc=new DOMParser().parseFromString(await response.text(),'text/html');}
+   data={title:meta(doc,'og:title'),description:meta(doc,'og:description'),image:meta(doc,'og:image'),url:meta(doc,'og:url')||url};
+   if(!data.title||!/^https?:\/\//.test(data.image)||!/^https?:\/\//.test(data.url))throw Error();
+   img.src=data.image;img.alt='Imagem de partilha de '+data.title;title.textContent=data.title;description.textContent=data.description;description.hidden=!data.description;domain.textContent=new URL(data.url).hostname;input.value=data.url;card.hidden=false;status.textContent='';proceed.disabled=false;debuggerLink.href='https://developers.facebook.com/tools/debug/?q='+encodeURIComponent(data.url);debuggerLink.hidden=false;
+   if(/Instagram|TikTok|WeChat|Messenger/.test(network.textContent))status.textContent='Será copiada a ligação. A apresentação na mensagem ou publicação depende da aplicação.';
+  }catch(_){status.textContent='Não foi possível verificar os dados de partilha. Fecha esta janela e volta a tentar.'}
+ };
+ const previewButton=document.createElement('button');previewButton.type='button';previewButton.className='episode-preview-button';previewButton.textContent='Pré-visualizar partilha';previewButton.addEventListener('click',()=>open(document.getElementById('copy')));sharing.querySelector('.share-buttons').prepend(previewButton);
+ sharing.addEventListener('click',event=>{if(bypass)return;const target=event.target.closest('a,button');if(!target||target===previewButton||target.id==='native-share'||target.textContent==='Fechar')return;if(target.matches('[data-share],#copy')||target.closest('#share-extra')){event.preventDefault();event.stopImmediatePropagation();open(target)}},true);
+ dialog.addEventListener('click',event=>{if(event.target===dialog){const rect=dialog.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)dialog.close()}});
+};
+
 window.initEpisodePlayer=function(){
 const audio=document.getElementById('audio');
 if(audio&&!audio.dataset.initialized){
@@ -157,7 +184,7 @@ audio.dataset.initialized='true';
  document.getElementById('rewind').addEventListener('click',()=>{if(audio.readyState)audio.currentTime=Math.max(0,audio.currentTime-15)});
  document.getElementById('forward').addEventListener('click',()=>{if(Number.isFinite(audio.duration))audio.currentTime=Math.min(audio.duration,audio.currentTime+15)});
  document.getElementById('custom-player').hidden=false;audio.controls=false;audio.hidden=true;
- const canonical=document.querySelector('link[rel=canonical]');const pageURL=canonical?canonical.href:location.href.split('#')[0];const title=document.querySelector('.episode-info h1').textContent;
+ const canonical=document.querySelector('link[rel=canonical]');const liveId=document.body.hasAttribute('data-live-episode')?new URLSearchParams(location.search).get('id'):null;const pageURL=liveId&&/^episodio-[a-f0-9]{20}$/.test(liveId)?new URL('episodios/'+liveId+'/',location.href).href:canonical?canonical.href:location.href.split('#')[0];const title=document.querySelector('.episode-info h1').textContent;
  const u=encodeURIComponent(pageURL),t=encodeURIComponent(title);const targets={whatsapp:'https://wa.me/?text='+encodeURIComponent(title+'\n'+pageURL),facebook:'https://www.facebook.com/sharer/sharer.php?u='+u,x:'https://twitter.com/intent/tweet?url='+u+'&text='+t,linkedin:'https://www.linkedin.com/sharing/share-offsite/?url='+u,telegram:'https://t.me/share/url?url='+u+'&text='+t};
  document.querySelectorAll('[data-share]').forEach(a=>{a.href=targets[a.dataset.share];a.target='_blank';a.rel='noopener noreferrer';a.setAttribute('aria-label','Partilhar no '+a.textContent)});
  document.getElementById('copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(pageURL);notify('Ligação copiada!')}catch(_){const input=document.createElement('textarea');input.value=pageURL;document.body.append(input);input.select();const ok=document.execCommand('copy');input.remove();if(ok)notify('Ligação copiada!');else window.prompt('Copie a ligação deste episódio:',pageURL)}});
@@ -172,6 +199,7 @@ audio.dataset.initialized='true';
  const close=document.createElement('button');close.type='button';close.textContent='Fechar';close.addEventListener('click',()=>{panel.hidden=true;moreShare.setAttribute('aria-expanded','false');moreShare.focus()});options.append(close);panel.append(options);moreShare.closest('.sharing').append(panel);
  moreShare.setAttribute('aria-controls',panel.id);moreShare.setAttribute('aria-expanded','false');moreShare.addEventListener('click',()=>{panel.hidden=!panel.hidden;moreShare.setAttribute('aria-expanded',String(!panel.hidden));if(!panel.hidden)options.querySelector('a').focus()});
  panel.addEventListener('keydown',e=>{if(e.key==='Escape'){panel.hidden=true;moreShare.setAttribute('aria-expanded','false');moreShare.focus()}});
+ window.setupEpisodeSharePreview(moreShare.closest('.sharing'));
  const downloadArea=document.createElement('div');downloadArea.className='download-area';const download=document.createElement('button');download.type='button';download.className='download-button';download.textContent='↓ Descarregar episódio';
  const downloadStatus=document.createElement('p');downloadStatus.setAttribute('role','status');const fallback=document.createElement('a');fallback.href=audio.src;fallback.target='_blank';fallback.rel='noopener noreferrer';fallback.textContent='Abrir o áudio para guardar';fallback.hidden=true;
  downloadArea.append(download,downloadStatus,fallback);document.querySelector('.player').after(downloadArea);
