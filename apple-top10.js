@@ -1,5 +1,6 @@
 // Shared by the episode homepage and the official app. No chart lists are stored.
 const FEED_URL = 'https://prazeres-interrompidos-apple-rankings.oct-nuno.chatgpt.site/api/rankings/latest.json';
+const FLAGS_URL = 'https://prazeres-interrompidos-apple-rankings.oct-nuno.chatgpt.site/flags/';
 const CATEGORIES = new Map([['1482', 'Livros'], ['1301', 'Arte'], ['26', 'Top Geral de Programas']]);
 const categoryOrder = ['1482', '1301', '26'];
 const dayFormat = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Lisbon', year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -58,7 +59,7 @@ export function mountTop10(section) {
   function updateContext() {
     if (!shownDay) return;
     const today = shownDay === lisbonDay();
-    title.textContent = today ? 'Hoje na Apple Podcasts' : 'Últimos registos na Apple Podcasts';
+    title.textContent = today ? 'As melhores posições do dia' : 'Últimos registos na Apple Podcasts';
     const [year, month, date] = shownDay.split('-');
     dateLabel.textContent = `${today ? '' : 'Registos de '}${date}/${month}/${year}`;
     dateLabel.dateTime = shownDay;
@@ -90,7 +91,17 @@ export function mountTop10(section) {
           category.textContent = CATEGORIES.get(record.category);
           const country = document.createElement('span');
           country.className = 'apple-top10__country';
-          country.textContent = countryNames?.of(record.country.toUpperCase()) || record.country.toUpperCase();
+          const flag = document.createElement('img');
+          flag.className = 'apple-top10__flag';
+          flag.src = `${FLAGS_URL}${record.country}.png`;
+          flag.alt = '';
+          flag.width = 24;
+          flag.height = 16;
+          flag.decoding = 'async';
+          flag.referrerPolicy = 'no-referrer';
+          const countryName = document.createElement('span');
+          countryName.textContent = countryNames?.of(record.country.toUpperCase()) || record.country.toUpperCase();
+          country.append(flag, countryName);
           detail.append(category, country);
           item.append(position, detail);
           return item;

@@ -117,7 +117,7 @@ test('An open page keeps the dated result at midnight and during an outage, then
     constructor(...args) { super(...(args.length ? args : [clock.getTime()])); }
     static now() { return clock.getTime(); }
   }
-  const element = () => ({ children: [], textContent: '', append(...nodes) { this.children.push(...nodes); }, replaceChildren(...nodes) { this.children = nodes; } });
+  const element = tagName => ({ tagName, children: [], textContent: '', append(...nodes) { this.children.push(...nodes); }, replaceChildren(...nodes) { this.children = nodes; } });
   const list = element(), title = element(), date = element();
   const section = { hidden: true, querySelector: selector => selector === '[data-top10-list]' ? list : selector === '[data-top10-date]' ? date : title };
   const intervals = new Map(), events = new Map();
@@ -133,7 +133,12 @@ test('An open page keeps the dated result at midnight and during an outage, then
   context.mountTop10(section);
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(section.hidden, false);
-  assert.equal(title.textContent, 'Hoje na Apple Podcasts');
+  assert.equal(title.textContent, 'As melhores posições do dia');
+  const portugal = list.children[0].children[1].children[1];
+  assert.equal(portugal.children[0].tagName, 'img');
+  assert.equal(portugal.children[0].src, 'https://prazeres-interrompidos-apple-rankings.oct-nuno.chatgpt.site/flags/pt.png');
+  assert.equal(portugal.children[0].alt, '');
+  assert.equal(portugal.children[1].textContent, 'Portugal');
   clock = new Date('2026-11-20T07:00:00Z');
   intervals.get(30000)();
   assert.equal(section.hidden, false);
@@ -149,8 +154,16 @@ test('An open page keeps the dated result at midnight and during an outage, then
   data = payload([{ ...observation, date: '2026-11-20', observed_at_utc: '2026-11-20T09:00:00Z', rank: 2 }]);
   data.run.finished_at_utc = '2026-11-20T09:05:00Z';
   await events.get('online')();
-  assert.equal(title.textContent, 'Hoje na Apple Podcasts');
+  assert.equal(title.textContent, 'As melhores posições do dia');
   assert.equal(date.textContent, '20/11/2026');
+  data.run.observations.push({ ...data.run.observations[0], country: 'br', rank: 175 });
+  await events.get('online')();
+  assert.equal(list.children.length, 2);
+  const brazil = list.children[1].children[1].children[1];
+  assert.equal(brazil.children[0].src, 'https://prazeres-interrompidos-apple-rankings.oct-nuno.chatgpt.site/flags/br.png');
+  assert.equal(brazil.children[1].textContent, 'Brasil');
+  assert.equal(list.children[1].children[0].textContent, '175.º');
+  data.run.observations.pop();
   data.run.observations[0].rank = 11;
   await events.get('online')();
   assert.equal(section.hidden, false);

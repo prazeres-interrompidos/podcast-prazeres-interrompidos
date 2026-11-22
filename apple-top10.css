@@ -7,7 +7,8 @@
 .apple-top10__item{display:flex;align-items:center;gap:14px;min-width:180px;margin:0;padding:0}
 .apple-top10__rank{font-size:2.5rem;line-height:1.1;letter-spacing:-1.5px;color:var(--top10-number);font-variant-numeric:tabular-nums}
 .apple-top10__item b{display:block;font-size:1rem;font-weight:650;line-height:1.5}
-.apple-top10__country{display:block;font-size:.875rem;line-height:1.5;color:var(--top10-muted)}
+.apple-top10__country{display:flex;align-items:center;gap:7px;font-size:.875rem;line-height:1.5;color:var(--top10-muted)}
+.apple-top10__flag{display:block;flex:none;width:24px;height:16px;object-fit:contain;border-radius:2px}
 .apple-top10__link{color:inherit;font-size:.875rem;font-weight:600;text-underline-offset:4px}
 .apple-top10__link:hover{text-decoration-thickness:2px}
 .apple-top10__link:focus-visible{outline:2px solid currentColor;outline-offset:4px}
