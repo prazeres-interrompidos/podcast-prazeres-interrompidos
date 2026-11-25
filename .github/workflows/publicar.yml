@@ -13,11 +13,9 @@ concurrency:
   group: github-pages
   cancel-in-progress: false
 jobs:
-  publicar:
+  gerar:
+    name: Gerar episódios
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -30,9 +28,35 @@ jobs:
         env:
           SITE_URL: ${{ steps.pages.outputs.base_url }}
         run: python scripts/gerar.py
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: public
+  publicar:
+    name: Publicar página
+    needs: gerar
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url || steps.retry.outputs.page_url || steps.retry_final.outputs.page_url }}
+    steps:
+      # O serviço de ficheiros do GitHub pode demorar a disponibilizar o envio.
+      # Repetir apenas a publicação evita criar ficheiros duplicados nesta execução.
       - name: Publicar
         id: deploy
-        uses: actions/deploy-pages@v4
+        continue-on-error: true
+        uses: actions/deploy-pages@v5
+      - name: Aguardar antes da segunda tentativa
+        if: steps.deploy.outcome == 'failure'
+        run: sleep 20
+      - name: Publicar (segunda tentativa)
+        id: retry
+        if: steps.deploy.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/deploy-pages@v5
+      - name: Aguardar antes da última tentativa
+        if: steps.retry.outcome == 'failure'
+        run: sleep 60
+      - name: Publicar (última tentativa)
+        id: retry_final
+        if: steps.retry.outcome == 'failure'
+        uses: actions/deploy-pages@v5
